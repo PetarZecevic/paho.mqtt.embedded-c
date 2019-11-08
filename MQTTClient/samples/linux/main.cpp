@@ -238,7 +238,9 @@ int main(int argc, char* argv[])
 	    printf("rc from MQTT connect is %d\n", rc);
 	printf("MQTT connected\n");
     
-    rc = client.subscribe("+", MQTT::QOS2, messageArrived);   
+    FP<void, MQTT::MessageData&> fp; // added
+    fp.attach(messageArrived); // added
+    rc = client.subscribe("+", MQTT::QOS2, fp); // added   
     if (rc != 0)
         printf("rc from MQTT subscribe is %d\n", rc);
 

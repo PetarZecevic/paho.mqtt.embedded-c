@@ -139,7 +139,14 @@ public:
         obj_callback = 0;
         c_callback = 0;
     }
-
+	
+	// Added overloaded constructor for class methods.
+	template<class T>
+	FP(T *item, retT (T::*method)(argT))
+	{
+		attach(item, method);
+	}
+	
     /** Add a callback function to the object
      *  @param item - Address of the initialized object
      *  @param member - Address of the member function (dont forget the scope that the function is defined in)

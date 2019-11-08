@@ -242,7 +242,9 @@ int main(int argc, char** argv)
 	
 	myconnect(ipstack, client, data);
     
-	rc = client.subscribe(topic, opts.qos, messageArrived);
+    FP<void, MQTT::MessageData&> fp; // added
+    fp.attach(messageArrived); // added
+	rc = client.subscribe(topic, opts.qos, fp); // added
 	printf("Subscribed %d\n", rc);
 
 	while (!toStop)

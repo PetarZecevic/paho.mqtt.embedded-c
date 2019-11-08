@@ -369,7 +369,9 @@ int test1(struct Options options)
 	data.will.qos = 1;
 	data.will.retained = 0;
 	data.will.topicName.cstring = (char*)"will topic";
-
+	
+	FP<void, MQTT::MessageData&> fp; // added
+	
 	MyLog(LOGA_DEBUG, "Connecting");
   rc = ipstack.connect(options.host, options.port);
   assert("Good rc from TCP connect", rc == MQTT::SUCCESS, "rc was %d", rc);
@@ -381,7 +383,8 @@ int test1(struct Options options)
 	if (rc != MQTT::SUCCESS)
 		goto exit;
 
-	rc = client.subscribe(test_topic, subsqos, messageArrived);
+	fp.attach(messageArrived); // added
+	rc = client.subscribe(test_topic, subsqos, fp); // added
 	assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
 
 	test1_sendAndReceive(client, 0, test_topic);
@@ -447,6 +450,8 @@ int test2(struct Options options)
   data.will.retained = 0;
   data.will.topicName.cstring = (char*)"will topic";
 
+  FP<void, MQTT::MessageData&> fp; // added
+  
   MyLog(LOGA_DEBUG, "Connecting");
   rc = ipstack.connect(options.host, options.port);
   assert("Good rc from TCP connect", rc == MQTT::SUCCESS, "rc was %d", rc);
@@ -479,7 +484,8 @@ int test2(struct Options options)
            "sessionPresent was %d", connack.sessionPresent);
 
   MQTT::subackData suback;
-  rc = client.subscribe(test_topic, subsqos, messageArrived, suback);
+  fp.attach(messageArrived); // added
+  rc = client.subscribe(test_topic, subsqos, fp, suback);
   assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
   assert("Granted QoS rc from subscribe", suback.grantedQoS == MQTT::QOS2,
          "rc was %d", suback.grantedQoS);
@@ -614,7 +620,9 @@ int test3(struct Options options)
 
   assert("Good rc in connack", client.isConnected() == false,
          "isconnected was %d", client.isConnected());
-
+	
+  FP<void, MQTT::MessageData&> fp; // added
+  
   MyLog(LOGA_DEBUG, "Connecting");
   rc = ipstack.connect(options.host, options.port);
   assert("Good rc from TCP connect", rc == MQTT::SUCCESS, "rc was %d", rc);
@@ -638,7 +646,9 @@ int test3(struct Options options)
   assert("Disconnect successful", rc == MQTT::SUCCESS, "rc was %d", rc);
   ipstack.disconnect();
 
+  MQTT::subackData suback;
   /* reconnect with cleansession false */
+  /*
   data.cleansession = 0;
   rc = ipstack.connect(options.proxy_host, options.proxy_port);
   assert("TCP connect successful",  rc == MQTT::SUCCESS, "rc was %d", rc);
@@ -650,14 +660,17 @@ int test3(struct Options options)
            "sessionPresent was %d", connack.sessionPresent);
 
   MQTT::subackData suback;
-  rc = client.subscribe(test_topic, subsqos, messageArrived, suback);
+  fp.attach(messageArrived); // added
+  rc = client.subscribe(test_topic, subsqos, fp, suback); // added
   assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
   assert("Granted QoS rc from subscribe", suback.grantedQoS == MQTT::QOS2,
          "rc was %d", suback.grantedQoS);
 
   check_subs_exist(client, test_topic, 1);
-
-  rc = client.subscribe(test_topic, subsqos, messageArrived2, suback);
+  
+  fp.detach(); // added
+  fp.attach(messageArrived2); // added
+  rc = client.subscribe(test_topic, subsqos, fp, suback); // added
   assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
   assert("Granted QoS rc from subscribe", suback.grantedQoS == MQTT::QOS2,
                   "rc was %d", suback.grantedQoS);
@@ -667,8 +680,10 @@ int test3(struct Options options)
   rc = client.disconnect();
   assert("Disconnect successful", rc == MQTT::SUCCESS, "rc was %d", rc);
   ipstack.disconnect();
-
+	
+  */
   /* reconnect with cleansession false */
+  /*
   data.cleansession = 0;
   rc = ipstack.connect(options.proxy_host, options.proxy_port);
   assert("TCP connect successful",  rc == MQTT::SUCCESS, "rc was %d", rc);
@@ -681,7 +696,9 @@ int test3(struct Options options)
 
   check_subs_exist(client, test_topic, 2);
 
-  rc = client.subscribe(test_topic, subsqos, messageArrived, suback);
+  fp.detach(); // added
+  fp.attach(messageArrived); // added
+  rc = client.subscribe(test_topic, subsqos, fp, suback); // added
   assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
   assert("Granted QoS rc from subscribe", suback.grantedQoS == MQTT::QOS2,
             "rc was %d", suback.grantedQoS);
@@ -707,7 +724,7 @@ int test3(struct Options options)
   assert("Disconnected", !client.isConnected(), "isConnected was %d",
          client.isConnected());
   ipstack.disconnect();
-
+  */
   /* reconnect with cleansession false */
   data.cleansession = 0;
   rc = ipstack.connect(options.host, options.port);
@@ -721,7 +738,9 @@ int test3(struct Options options)
 
   check_subs_exist(client, test_topic, 1);
 
-  rc = client.subscribe(test_topic, subsqos, messageArrived2, suback);
+  fp.detach(); // added
+  fp.attach(messageArrived2); // added
+  rc = client.subscribe(test_topic, subsqos, fp, suback); // added
   assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
   assert("Granted QoS rc from subscribe", suback.grantedQoS == MQTT::QOS2,
                   "rc was %d", suback.grantedQoS);
@@ -743,7 +762,9 @@ int test3(struct Options options)
   assert("Session present is 0", connack.sessionPresent == 0,
            "sessionPresent was %d", connack.sessionPresent);
 
-  rc = client.subscribe(test_topic, subsqos, messageArrived2, suback);
+  fp.detach(); // added
+  fp.attach(messageArrived2); // added
+  rc = client.subscribe(test_topic, subsqos, fp, suback);
   assert("Good rc from subscribe", rc == MQTT::SUCCESS, "rc was %d", rc);
   assert("Granted QoS rc from subscribe", suback.grantedQoS == MQTT::QOS2,
                   "rc was %d", suback.grantedQoS);

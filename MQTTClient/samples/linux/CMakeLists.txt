@@ -24,6 +24,14 @@ target_include_directories(hello PRIVATE "../../src" "../../src/linux")
 target_link_libraries(hello MQTTPacketClient)
 
 add_executable(
+  class-example
+  class-example.cpp
+)
+
+target_include_directories(class-example PRIVATE "../../src" "../../src/linux")
+target_link_libraries(class-example MQTTPacketClient)
+
+add_executable(
   stdoutsub
   stdoutsub.cpp
 )

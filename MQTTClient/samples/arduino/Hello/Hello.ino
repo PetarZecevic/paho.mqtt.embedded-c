@@ -70,7 +70,9 @@ void connect()
   }
   Serial.println("MQTT connected");
   
-  rc = client.subscribe(topic, MQTT::QOS2, messageArrived);   
+  FP<void, MQTT::MessageData&> fp; // added
+  fp.attach(messageArrived); // added
+  rc = client.subscribe(topic, MQTT::QOS2, fp); //added   
   if (rc != 0)
   {
     sprintf(printbuf, "rc from MQTT subscribe is %d\n", rc);

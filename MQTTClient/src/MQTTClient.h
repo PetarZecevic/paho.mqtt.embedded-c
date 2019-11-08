@@ -114,7 +114,7 @@ class Client
 
 public:
 
-    typedef void (*messageHandler)(MessageData&);
+    typedef FP<void, MessageData&> MessageHandler;
 
     /** Construct the client
      *  @param network - pointer to an instance of the Network class - must be connected to the endpoint
@@ -126,19 +126,19 @@ public:
     /** Set the default message handling callback - used for any message which does not match a subscription message handler
      *  @param mh - pointer to the callback function.  Set to 0 to remove.
      */
-    void setDefaultMessageHandler(messageHandler mh)
+    void setDefaultMessageHandler(MessageHandler mh)
     {
-        if (mh != 0)
-            defaultMessageHandler.attach(mh);
+        if (mh.attached())
+            defaultMessageHandler = mh;
         else
-            defaultMessageHandler.detach();
+            defaultMessageHandler = mh;
     }
 
     /** Set a message handling callback.  This can be used outside of the the subscribe method.
      *  @param topicFilter - a topic pattern which can include wildcards
      *  @param mh - pointer to the callback function. If 0, removes the callback if any
      */
-    int setMessageHandler(const char* topicFilter, messageHandler mh);
+    int setMessageHandler(const char* topicFilter, MessageHandler mh);
 
     /** MQTT Connect - send an MQTT connect packet down the network and wait for a Connack
      *  The nework object must be connected to the network endpoint before calling this
@@ -196,7 +196,7 @@ public:
      *  @param mh - the callback function to be invoked when a message is received for this subscription
      *  @return success code -
      */
-    int subscribe(const char* topicFilter, enum QoS qos, messageHandler mh);
+    int subscribe(const char* topicFilter, enum QoS qos, MessageHandler mh);
 
     /** MQTT Subscribe - send an MQTT subscribe packet and wait for the suback
      *  @param topicFilter - a topic pattern which can include wildcards
@@ -205,7 +205,7 @@ public:
      *  @param
      *  @return success code -
      */
-    int subscribe(const char* topicFilter, enum QoS qos, messageHandler mh, subackData &data);
+    int subscribe(const char* topicFilter, enum QoS qos, MessageHandler mh, subackData &data);
 
     /** MQTT Unsubscribe - send an MQTT unsubscribe packet and wait for the unsuback
      *  @param topicFilter - a topic pattern which can include wildcards
@@ -265,10 +265,10 @@ private:
     struct MessageHandlers
     {
         const char* topicFilter;
-        FP<void, MessageData&> fp;
+        MessageHandler fp;
     } messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
 
-    FP<void, MessageData&> defaultMessageHandler;
+    MessageHandler defaultMessageHandler;
 
     bool isconnected;
 
@@ -807,7 +807,7 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, b>::connect()
 
 
 template<class Network, class Timer, int MAX_MQTT_PACKET_SIZE, int MAX_MESSAGE_HANDLERS>
-int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::setMessageHandler(const char* topicFilter, messageHandler messageHandler)
+int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::setMessageHandler(const char* topicFilter, MessageHandler messageHandler)
 {
     int rc = FAILURE;
     int i = -1;
@@ -817,7 +817,7 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::se
     {
         if (messageHandlers[i].topicFilter != 0 && strcmp(messageHandlers[i].topicFilter, topicFilter) == 0)
         {
-            if (messageHandler == 0) // remove existing
+            if (!messageHandler.attached()) // remove existing
             {
                 messageHandlers[i].topicFilter = 0;
                 messageHandlers[i].fp.detach();
@@ -827,7 +827,7 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::se
         }
     }
     // if no existing, look for empty slot (unless we are removing)
-    if (messageHandler != 0) {
+    if (messageHandler.attached()) {
         if (rc == FAILURE)
         {
             for (i = 0; i < MAX_MESSAGE_HANDLERS; ++i)
@@ -842,7 +842,7 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::se
         if (i < MAX_MESSAGE_HANDLERS)
         {
             messageHandlers[i].topicFilter = topicFilter;
-            messageHandlers[i].fp.attach(messageHandler);
+            messageHandlers[i].fp = messageHandler;
         }
     }
     return rc;
@@ -851,7 +851,7 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::se
 
 template<class Network, class Timer, int MAX_MQTT_PACKET_SIZE, int MAX_MESSAGE_HANDLERS>
 int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::subscribe(const char* topicFilter,
-     enum QoS qos, messageHandler messageHandler, subackData& data)
+     enum QoS qos, MessageHandler messageHandler, subackData& data)
 {
     int rc = FAILURE;
     Timer timer(command_timeout_ms);
@@ -889,7 +889,7 @@ exit:
 
 
 template<class Network, class Timer, int MAX_MQTT_PACKET_SIZE, int MAX_MESSAGE_HANDLERS>
-int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::subscribe(const char* topicFilter, enum QoS qos, messageHandler messageHandler)
+int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::subscribe(const char* topicFilter, enum QoS qos, MessageHandler messageHandler)
 {
     subackData data;
     return subscribe(topicFilter, qos, messageHandler, data);
@@ -918,7 +918,8 @@ int MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, MAX_MESSAGE_HANDLERS>::un
         if (MQTTDeserialize_unsuback(&mypacketid, readbuf, MAX_MQTT_PACKET_SIZE) == 1)
         {
             // remove the subscription message handler associated with this topic, if there is one
-            setMessageHandler(topicFilter, 0);
+            MessageHandler empty;
+            setMessageHandler(topicFilter, empty);
         }
     }
     else
